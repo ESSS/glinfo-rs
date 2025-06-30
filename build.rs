@@ -6,8 +6,6 @@ use cfg_aliases::cfg_aliases;
 use gl_generator::{Api, Fallbacks, Profile, Registry, StructGenerator};
 
 fn main() {
-    // XXX this is taken from glutin/build.rs.
-
     // Setup alias to reduce `cfg` boilerplate.
     cfg_aliases! {
         // Systems.
@@ -30,8 +28,6 @@ fn main() {
     }
 
     let dest = PathBuf::from(&env::var("OUT_DIR").unwrap());
-
-    println!("cargo:rerun-if-changed=build.rs");
 
     let mut file = File::create(dest.join("gl_bindings.rs")).unwrap();
     Registry::new(Api::Gles2, (3, 0), Profile::Core, Fallbacks::All, [])
