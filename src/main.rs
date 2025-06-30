@@ -51,7 +51,8 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         EventLoop::new().map_err(|err| format!("Failed to create event loop: {}", err))?;
     let template = ConfigTemplateBuilder::new();
 
-    let display_builder = DisplayBuilder::new().with_window_attributes(Some(window_attributes()));
+    let display_builder = DisplayBuilder::new()
+        .with_window_attributes(Some(Window::default_attributes().with_visible(false)));
 
     let output = match get_gl_info(template, display_builder, &event_loop) {
         Ok(gl_info) => format!("{}", gl_info),
@@ -173,10 +174,6 @@ fn create_gl_context(
         }
         Err("Failed to create GL context".into())
     }
-}
-
-fn window_attributes() -> WindowAttributes {
-    Window::default_attributes().with_visible(false)
 }
 
 fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> Option<&'static CStr> {
