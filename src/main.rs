@@ -76,7 +76,8 @@ impl GLInfo {
 
 pub fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() == 2 && (args[1] == "-h" || args[1] == "--help") {
+    let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    if let [_, "-h" | "--help"] = args[..] {
         println!("Usage: glinfo [-f filename]");
         return Ok(());
     }
@@ -95,8 +96,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
 
     println!("{}", output);
 
-    if args.len() == 3 && args[1] == "-f" {
-        let filename = &args[2];
+    if let [_, "-f", filename] = args[..] {
         std::fs::write(filename, output.as_bytes())?;
     }
 
