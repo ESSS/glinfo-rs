@@ -48,7 +48,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let event_loop =
-        EventLoop::new().map_err(|err| format!("Failed to create event loop: {}", err))?;
+        EventLoop::new().map_err(|err| format!("Failed to create event loop: {err}"))?;
     let template = ConfigTemplateBuilder::new();
 
     let display_builder = DisplayBuilder::new()
