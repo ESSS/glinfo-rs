@@ -82,14 +82,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
 
-    let event_loop =
-        EventLoop::new().map_err(|err| format!("Failed to create event loop: {err}"))?;
-    let template = ConfigTemplateBuilder::new();
-
-    let display_builder = DisplayBuilder::new()
-        .with_window_attributes(Some(Window::default_attributes().with_visible(false)));
-
-    let output = match get_gl_info(template, display_builder, &event_loop) {
+    let output = match get_gl_info() {
         Ok(gl_info) => format!("{}", gl_info),
         Err(err) => format!("ERROR: {}", err),
     };
@@ -103,15 +96,17 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn get_gl_info(
-    template: ConfigTemplateBuilder,
-    display_builder: DisplayBuilder,
-    event_loop: &EventLoop<()>,
-) -> Result<GLInfo, String> {
+fn get_gl_info() -> Result<GLInfo, String> {
+    let event_loop =
+        EventLoop::new().map_err(|err| format!("Failed to create event loop: {err}"))?;
+    let template = ConfigTemplateBuilder::new();
+
+    let display_builder = DisplayBuilder::new()
+        .with_window_attributes(Some(Window::default_attributes().with_visible(false)));
     // We just created the event loop, so initialize the display, pick the config, and
     // create the context.
     let (window, gl_config) =
-        match display_builder.build(event_loop, template.clone(), |mut configs| {
+        match display_builder.build(&event_loop, template.clone(), |mut configs| {
             configs.next().expect("Could not get any configs")
         }) {
             Ok((window, gl_config)) => (window.unwrap(), gl_config),
