@@ -145,19 +145,23 @@ fn create_gl_context(
     let raw_window_handle = window.window_handle().ok().map(|wh| wh.as_raw());
 
     // The context creation part.
-    let context_attributes = ContextAttributesBuilder::new().build(raw_window_handle);
+    let default_context_attributes = || ContextAttributesBuilder::new().build(raw_window_handle);
 
     // Since glutin by default tries to create OpenGL core context, which may not be
-    // present we should try gles.
-    let fallback_context_attributes = ContextAttributesBuilder::new()
-        .with_context_api(ContextApi::Gles(None))
-        .build(raw_window_handle);
+    // present, try gles.
+    let fallback_context_attributes = || {
+        ContextAttributesBuilder::new()
+            .with_context_api(ContextApi::Gles(None))
+            .build(raw_window_handle)
+    };
 
     // There are also some old devices that support neither modern OpenGL nor GLES.
     // To support these we can try and create a 2.1 context.
-    let legacy_context_attributes = ContextAttributesBuilder::new()
-        .with_context_api(ContextApi::OpenGl(Some(Version::new(2, 1))))
-        .build(raw_window_handle);
+    let legacy_context_attributes = || {
+        ContextAttributesBuilder::new()
+            .with_context_api(ContextApi::OpenGl(Some(Version::new(2, 1))))
+            .build(raw_window_handle)
+    };
 
     // Reuse the uncurrented context from a suspended() call if it exists, otherwise
     // this is the first time resumed() is called, where the context still
@@ -165,11 +169,11 @@ fn create_gl_context(
     let gl_display = gl_config.display();
 
     unsafe {
-        if let Ok(c) = gl_display.create_context(gl_config, &context_attributes) {
+        if let Ok(c) = gl_display.create_context(gl_config, &default_context_attributes()) {
             return Ok(("LibGL", c));
-        } else if let Ok(c) = gl_display.create_context(gl_config, &fallback_context_attributes) {
+        } else if let Ok(c) = gl_display.create_context(gl_config, &fallback_context_attributes()) {
             return Ok(("LibGLES", c));
-        } else if let Ok(c) = gl_display.create_context(gl_config, &legacy_context_attributes) {
+        } else if let Ok(c) = gl_display.create_context(gl_config, &legacy_context_attributes()) {
             return Ok(("libGL", c));
         }
         Err("Failed to create GL context".into())
