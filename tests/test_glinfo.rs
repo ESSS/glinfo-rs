@@ -4,6 +4,8 @@ use std::process::Command;
 fn test_gl_info() {
     let output = Command::new(env!("CARGO_BIN_EXE_glinfo")).output().unwrap();
     let stdout = String::from_utf8(output.stdout).unwrap();
+    println!("Stdout: {}", stdout);
+    println!("Stderr: {}", String::from_utf8(output.stderr).unwrap());
     assert!(stdout.contains("Vendor:"));
 }
 
@@ -13,6 +15,7 @@ fn test_gl_info_file() {
         .args(["-f", "out.txt"])
         .output()
         .unwrap();
-    let stdout = std::fs::read_to_string("out.txt").unwrap();
-    assert!(stdout.contains("Vendor:"));
+    let contents = std::fs::read_to_string("out.txt").unwrap();
+    println!("{}", contents);
+    assert!(contents.contains("Vendor:"));
 }

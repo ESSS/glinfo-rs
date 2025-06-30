@@ -20,6 +20,27 @@ pub mod gl {
     pub use Gles2 as Gl;
 }
 
+#[derive(Debug, Clone)]
+struct GLInfo {
+    driver: String,
+    vendor: String,
+    renderer: String,
+    version: String,
+    shading_language: String,
+}
+
+impl Display for GLInfo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!(
+            "{} Vendor: {}\n\
+             Renderer: {}\n\
+             Version: {}\n\
+             Shading Language: {}",
+            self.driver, self.vendor, self.renderer, self.version, self.shading_language
+        ))
+    }
+}
+
 pub fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 2 && (args[1] == "-h" || args[1] == "--help") {
@@ -157,31 +178,6 @@ fn create_gl_context(
 
 fn window_attributes() -> WindowAttributes {
     Window::default_attributes().with_visible(false)
-}
-
-#[derive(Debug, Clone)]
-struct GLInfo {
-    vendor: String,
-    renderer: String,
-    version: String,
-    shading_language: String,
-    driver: String,
-}
-
-impl Display for GLInfo {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!(
-            "{} Vendor: {}\n\
-             Renderer: {}\n\
-             Version: {}\n\
-             Shading Language: {}",
-            self.driver, self.vendor, self.renderer, self.version, self.shading_language
-        ))
-    }
-}
-
-pub fn gl_config_picker(mut configs: Box<dyn Iterator<Item = Config> + '_>) -> Config {
-    configs.next().unwrap()
 }
 
 fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> Option<&'static CStr> {
