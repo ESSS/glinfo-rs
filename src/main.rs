@@ -41,6 +41,39 @@ impl Display for GLInfo {
     }
 }
 
+impl GLInfo {
+    fn from_gl(driver: &str, gl: &gl::Gl) -> Self {
+        let vendor = if let Some(vendor) = get_gl_string(&gl, gl::VENDOR) {
+            vendor.to_string_lossy().into()
+        } else {
+            "".to_string()
+        };
+        let renderer = if let Some(renderer) = get_gl_string(&gl, gl::RENDERER) {
+            renderer.to_string_lossy().into()
+        } else {
+            "".to_string()
+        };
+        let version = if let Some(version) = get_gl_string(&gl, gl::VERSION) {
+            version.to_string_lossy().into()
+        } else {
+            "".to_string()
+        };
+        let shading_language =
+            if let Some(shaders_version) = get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION) {
+                shaders_version.to_string_lossy().into()
+            } else {
+                "".to_string()
+            };
+        GLInfo {
+            driver: driver.to_string(),
+            vendor,
+            renderer,
+            version,
+            shading_language,
+        }
+    }
+}
+
 pub fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() == 2 && (args[1] == "-h" || args[1] == "--help") {
@@ -114,27 +147,7 @@ fn get_gl_info(
         gl_display.get_proc_address(symbol.as_c_str()).cast()
     });
 
-    let mut gl_info = GLInfo {
-        driver: driver.to_string(),
-        vendor: "".to_string(),
-        renderer: "".to_string(),
-        version: "".to_string(),
-        shading_language: "".to_string(),
-    };
-    if let Some(vendor) = get_gl_string(&gl, gl::VENDOR) {
-        gl_info.vendor = vendor.to_string_lossy().into();
-    }
-    if let Some(renderer) = get_gl_string(&gl, gl::RENDERER) {
-        gl_info.renderer = renderer.to_string_lossy().into();
-    }
-    if let Some(version) = get_gl_string(&gl, gl::VERSION) {
-        gl_info.version = version.to_string_lossy().into();
-    }
-
-    if let Some(shaders_version) = get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION) {
-        gl_info.shading_language = shaders_version.to_string_lossy().into();
-    }
-    Ok(gl_info)
+    Ok(GLInfo::from_gl(driver, &gl))
 }
 
 fn create_gl_context(
