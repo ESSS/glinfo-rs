@@ -21,8 +21,25 @@ pub mod gl {
 }
 
 #[derive(Debug, Clone)]
+enum GLDriver {
+    LibGL,
+    LibGLES,
+    LegacyLibGL,
+}
+
+impl Display for GLDriver {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GLDriver::LibGL => f.write_str("LibGL"),
+            GLDriver::LibGLES => f.write_str("LibGLES"),
+            GLDriver::LegacyLibGL => f.write_str("libGL"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 struct GLInfo {
-    driver: String,
+    driver: GLDriver,
     vendor: String,
     renderer: String,
     version: String,
@@ -36,15 +53,19 @@ impl Display for GLInfo {
              Renderer: {}\n\
              Version: {}\n\
              Shading Language: {}",
-            self.driver, self.vendor, self.renderer, self.version, self.shading_language
+            self.driver.to_string(),
+            self.vendor,
+            self.renderer,
+            self.version,
+            self.shading_language
         ))
     }
 }
 
 impl GLInfo {
-    fn from_gl(driver: &str, gl: &gl::Gl) -> Self {
+    fn from_gl(driver: GLDriver, gl: &gl::Gl) -> Self {
         GLInfo {
-            driver: driver.to_string(),
+            driver,
             vendor: get_gl_string(&gl, gl::VENDOR),
             renderer: get_gl_string(&gl, gl::RENDERER),
             version: get_gl_string(&gl, gl::VERSION),
@@ -132,7 +153,7 @@ fn get_gl_info(
 fn create_gl_context(
     window: &Window,
     gl_config: &Config,
-) -> Result<(&'static str, NotCurrentContext), String> {
+) -> Result<(GLDriver, NotCurrentContext), String> {
     let raw_window_handle = window.window_handle().ok().map(|wh| wh.as_raw());
 
     // The context creation part.
@@ -154,18 +175,15 @@ fn create_gl_context(
             .build(raw_window_handle)
     };
 
-    // Reuse the uncurrented context from a suspended() call if it exists, otherwise
-    // this is the first time resumed() is called, where the context still
-    // has to be created.
     let gl_display = gl_config.display();
 
     unsafe {
         if let Ok(c) = gl_display.create_context(gl_config, &default_context_attributes()) {
-            return Ok(("LibGL", c));
+            return Ok((GLDriver::LibGL, c));
         } else if let Ok(c) = gl_display.create_context(gl_config, &fallback_context_attributes()) {
-            return Ok(("LibGLES", c));
+            return Ok((GLDriver::LibGLES, c));
         } else if let Ok(c) = gl_display.create_context(gl_config, &legacy_context_attributes()) {
-            return Ok(("libGL", c));
+            return Ok((GLDriver::LegacyLibGL, c));
         }
         Err("Failed to create GL context".into())
     }
