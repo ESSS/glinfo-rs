@@ -34,4 +34,6 @@ jobs:
     - name: Build
       run: cargo build
     - name: Run tests
-      run: cargo test
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: cargo test
