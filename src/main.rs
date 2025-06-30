@@ -45,7 +45,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         String::from("ERROR: Unable to create an OpenGL context.")
     };
 
-    println!("HEHEHEHE{}", output);
+    println!("{}", output);
 
     if args.len() == 3 && args[1] == "-f" {
         let filename = &args[2];
