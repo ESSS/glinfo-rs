@@ -14,7 +14,6 @@ use glutin_winit::{DisplayBuilder, GlWindow};
 
 pub mod gl {
     #![allow(clippy::all)]
-    #![allow(unsafe_code)]
     include!(concat!(env!("OUT_DIR"), "/gl_bindings.rs"));
 
     pub use Gles2 as Gl;
