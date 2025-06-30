@@ -31,7 +31,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     let display_builder = DisplayBuilder::new().with_window_attributes(Some(window_attributes()));
 
     let args: Vec<String> = std::env::args().collect();
-    if args.len() == 2 && args[1] == "-h" || args[1] == "--help" {
+    if args.len() == 2 && (args[1] == "-h" || args[1] == "--help") {
         println!("Usage: glinfo [-f filename]");
         return Ok(());
     }
@@ -45,7 +45,7 @@ pub fn main() -> Result<(), Box<dyn Error>> {
         String::from("ERROR: Unable to create an OpenGL context.")
     };
 
-    println!("{}", output);
+    println!("HEHEHEHE{}", output);
 
     if args.len() == 3 && args[1] == "-f" {
         let filename = &args[2];
