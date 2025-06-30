@@ -22,6 +22,12 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
+    - name: Install Dependencies
+      if: "matrix.platform == 'ubuntu-latest'"
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y libgles2-mesa-dev
+      shell: bash
     - uses: actions/checkout@v4
     - name: Check
       run: cargo fmt --check
