@@ -29,11 +29,11 @@ pub fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let output = match GLInfo::build() {
-        Ok(gl_info) => format!("{}", gl_info),
+        Ok(gl_info) => gl_info.to_string(),
         Err(err) => format!("ERROR: {}", err),
     };
 
-    println!("{}", output);
+    println!("{output}");
 
     if let [_, "-f", filename] = args[..] {
         std::fs::write(filename, output.as_bytes())?;
