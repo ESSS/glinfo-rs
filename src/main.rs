@@ -43,33 +43,12 @@ impl Display for GLInfo {
 
 impl GLInfo {
     fn from_gl(driver: &str, gl: &gl::Gl) -> Self {
-        let vendor = if let Some(vendor) = get_gl_string(&gl, gl::VENDOR) {
-            vendor.to_string_lossy().into()
-        } else {
-            "".to_string()
-        };
-        let renderer = if let Some(renderer) = get_gl_string(&gl, gl::RENDERER) {
-            renderer.to_string_lossy().into()
-        } else {
-            "".to_string()
-        };
-        let version = if let Some(version) = get_gl_string(&gl, gl::VERSION) {
-            version.to_string_lossy().into()
-        } else {
-            "".to_string()
-        };
-        let shading_language =
-            if let Some(shaders_version) = get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION) {
-                shaders_version.to_string_lossy().into()
-            } else {
-                "".to_string()
-            };
         GLInfo {
             driver: driver.to_string(),
-            vendor,
-            renderer,
-            version,
-            shading_language,
+            vendor: get_gl_string(&gl, gl::VENDOR),
+            renderer: get_gl_string(&gl, gl::RENDERER),
+            version: get_gl_string(&gl, gl::VERSION),
+            shading_language: get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION),
         }
     }
 }
@@ -192,9 +171,13 @@ fn create_gl_context(
     }
 }
 
-fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> Option<&'static CStr> {
+fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> String {
     unsafe {
         let s = gl.GetString(variant);
-        (!s.is_null()).then(|| CStr::from_ptr(s.cast()))
+        if s.is_null() {
+            "".into()
+        } else {
+            CStr::from_ptr(s.cast()).to_string_lossy().into()
+        }
     }
 }
