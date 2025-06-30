@@ -3,7 +3,7 @@ use std::ffi::{CStr, CString};
 use std::fmt::{Display, Formatter};
 use winit::event_loop::EventLoop;
 use winit::raw_window_handle::HasWindowHandle;
-use winit::window::{Window, WindowAttributes};
+use winit::window::Window;
 
 use glutin::config::{Config, ConfigTemplateBuilder};
 use glutin::context::{ContextApi, ContextAttributesBuilder, NotCurrentContext, Version};
@@ -14,6 +14,7 @@ use glutin_winit::{DisplayBuilder, GlWindow};
 
 pub mod gl {
     #![allow(clippy::all)]
+    #![allow(unsafe_op_in_unsafe_fn)]
     include!(concat!(env!("OUT_DIR"), "/gl_bindings.rs"));
 
     pub use Gles2 as Gl;
@@ -77,11 +78,9 @@ fn get_gl_info(
     // We just created the event loop, so initialize the display, pick the config, and
     // create the context.
     let (window, gl_config) =
-        match display_builder
-            .clone()
-            .build(event_loop, template.clone(), |mut configs| {
-                configs.next().expect("Could not get any configs")
-            }) {
+        match display_builder.build(event_loop, template.clone(), |mut configs| {
+            configs.next().expect("Could not get any configs")
+        }) {
             Ok((window, gl_config)) => (window.unwrap(), gl_config),
             Err(err) => {
                 return Err(err.to_string());
