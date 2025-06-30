@@ -27,29 +27,22 @@ pub mod gl {
 }
 
 pub fn main() -> Result<(), Box<dyn Error>> {
-    // The template will match only the configurations supporting rendering
-    // to windows.
-    //
-    // XXX We force transparency only on macOS, given that EGL on X11 doesn't
-    // have it, but we still want to show window. The macOS situation is like
-    // that, because we can query only one config at a time on it, but all
-    // normal platforms will return multiple configs, so we can find the config
-    // with transparency ourselves inside the `reduce`.
     let event_loop  =EventLoop::new().unwrap();
-    let template =
-        ConfigTemplateBuilder::new().with_alpha_size(8).with_transparency(cfg!(cgl_backend));
+    let template = ConfigTemplateBuilder::new();
 
     let display_builder = DisplayBuilder::new().with_window_attributes(Some(window_attributes()));
 
     let mut app = App::new(template, display_builder);
     event_loop.run_app(&mut app)?;
 
+    println!("{:?}", app.gl_info);
+
     app.exit_state
 }
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let (vendor, window, gl_config) = match &self.gl_display {
+        let (driver, window, gl_config) = match &self.gl_display {
             // We just created the event loop, so initialize the display, pick the config, and
             // create the context.
             GlDisplayCreationState::Builder(display_builder) => {
@@ -71,14 +64,14 @@ impl ApplicationHandler for App {
                 self.gl_display = GlDisplayCreationState::Init;
 
                 // Create gl context.
-                let (vendor_name, context) = create_gl_context(&window, &gl_config);
+                let (driver, context) = create_gl_context(&window, &gl_config);
                 self.gl_context = Some(context.treat_as_possibly_current());
 
-                (Some(vendor_name), window, gl_config)
+                (Some(driver), window, gl_config)
             },
             GlDisplayCreationState::Init => {
-                println!("Recreating window in `resumed`");
                 // Pick the config which we already use for the context.
+                panic!("OH NO");
                 let gl_config = self.gl_context.as_ref().unwrap().config();
                 match glutin_winit::finalize_window(event_loop, window_attributes(), &gl_config) {
                     Ok(window) => (None, window, gl_config),
@@ -103,7 +96,6 @@ impl ApplicationHandler for App {
         let gl_context = self.gl_context.as_ref().unwrap();
         gl_context.make_current(&gl_surface).unwrap();
 
-        //self.renderer.get_or_insert_with(|| Renderer::new(&gl_config.display()));
 
         let gl_display = gl_config.display();
 
@@ -112,46 +104,31 @@ impl ApplicationHandler for App {
             gl_display.get_proc_address(symbol.as_c_str()).cast()
         });
 
-        if let Some(lib_name) = vendor {
+        if let Some(lib_name) = driver {
+            let mut gl_info = GLInfo {
+                driver: lib_name.to_string(),
+                vendor: "".to_string(),
+                renderer: "".to_string(),
+                version: "".to_string(),
+                shading_language: "".to_string(),
+            };
             if let Some(vendor) = get_gl_string(&gl, gl::VENDOR) {
-                println!("{} Vendor: {}", lib_name, vendor.to_string_lossy());
+                gl_info.vendor = vendor.to_string_lossy().into();
             }
             if let Some(renderer) = get_gl_string(&gl, gl::RENDERER) {
-                println!("Renderer: {}", renderer.to_string_lossy());
+                gl_info.renderer = renderer.to_string_lossy().into();
             }
             if let Some(version) = get_gl_string(&gl, gl::VERSION) {
-                println!("Version: {}", version.to_string_lossy());
+                gl_info.version = version.to_string_lossy().into();
             }
 
             if let Some(shaders_version) = get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION) {
-                println!("Shading Language: {}", shaders_version.to_string_lossy());
+                gl_info.shading_language = shaders_version.to_string_lossy().into();
             }
+            self.gl_info = Some(gl_info);
         }
-
-        // Try setting vsync.
-        // if let Err(res) = gl_surface
-        //     .set_swap_interval(gl_context, SwapInterval::Wait(NonZeroU32::new(1).unwrap()))
-        // {
-        //     eprintln!("Error setting vsync: {res:?}");
-        // }
-        //
-        // assert!(self.state.replace(AppState { gl_surface, window }).is_none());
     }
 
-    // fn suspended(&mut self, _event_loop: &ActiveEventLoop) {
-    //     // This event is only raised on Android, where the backing NativeWindow for a GL
-    //     // Surface can appear and disappear at any moment.
-    //     // println!("Android window removed");
-    //     //
-    //     // // Destroy the GL Surface and un-current the GL Context before ndk-glue releases
-    //     // // the window back to the system.
-    //     // self.state = None;
-    //     //
-    //     // // Make context not current.
-    //     // self.gl_context = Some(
-    //     //     self.gl_context.take().unwrap().make_not_current().unwrap().treat_as_possibly_current(),
-    //     // );
-    // }
 
     fn window_event(
         &mut self,
@@ -160,61 +137,8 @@ impl ApplicationHandler for App {
         _event: WindowEvent,
     ) {
         event_loop.exit();
-
-        // match event {
-        //     WindowEvent::Resized(size) if size.width != 0 && size.height != 0 => {
-        //         // Some platforms like EGL require resizing GL surface to update the size
-        //         // Notable platforms here are Wayland and macOS, other don't require it
-        //         // and the function is no-op, but it's wise to resize it for portability
-        //         // reasons.
-        //         if let Some(AppState { gl_surface, window: _ }) = self.state.as_ref() {
-        //             let gl_context = self.gl_context.as_ref().unwrap();
-        //             gl_surface.resize(
-        //                 gl_context,
-        //                 NonZeroU32::new(size.width).unwrap(),
-        //                 NonZeroU32::new(size.height).unwrap(),
-        //             );
-        //
-        //             // let renderer = self.renderer.as_ref().unwrap();
-        //             // renderer.resize(size.width as i32, size.height as i32);
-        //         }
-        //     },
-        //     WindowEvent::CloseRequested
-        //     | WindowEvent::KeyboardInput {
-        //         event: KeyEvent { logical_key: Key::Named(NamedKey::Escape), .. },
-        //         ..
-        //     } => event_loop.exit(),
-        //     _ => (),
-        // }
     }
 
-    // fn exiting(&mut self, _event_loop: &ActiveEventLoop) {
-    //     // NOTE: The handling below is only needed due to nvidia on Wayland to not crash
-    //     // on exit due to nvidia driver touching the Wayland display from on
-    //     // `exit` hook.
-    //     // let _gl_display = self.gl_context.take().unwrap().display();
-    //     //
-    //     // // Clear the window.
-    //     // self.state = None;
-    //     // #[cfg(egl_backend)]
-    //     // #[allow(irrefutable_let_patterns)]
-    //     // if let glutin::display::Display::Egl(display) = _gl_display {
-    //     //     unsafe {
-    //     //         display.terminate();
-    //     //     }
-    //     // }
-    // }
-
-    // fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-    //     if let Some(AppState { gl_surface, window }) = self.state.as_ref() {
-    //         let gl_context = self.gl_context.as_ref().unwrap();
-    //         let renderer = self.renderer.as_ref().unwrap();
-    //         //renderer.draw();
-    //         //window.request_redraw();
-    //
-    //         //gl_surface.swap_buffers(gl_context).unwrap();
-    //     }
-    // }
 }
 
 fn create_gl_context(window: &Window, gl_config: &Config) -> (&'static str, NotCurrentContext) {
@@ -242,9 +166,9 @@ fn create_gl_context(window: &Window, gl_config: &Config) -> (&'static str, NotC
 
     unsafe {
         if let Ok(c) = gl_display.create_context(gl_config, &context_attributes) {
-            return ("libGL", c);
+            return ("LibGL", c);
         } else if let Ok(c) = gl_display.create_context(gl_config, &fallback_context_attributes) {
-            return ("libGLE", c);
+            return ("LibGLES", c);
         } else if let Ok(c) = gl_display.create_context(gl_config, &legacy_context_attributes) {
             return ("libGL", c);
         }
@@ -254,9 +178,7 @@ fn create_gl_context(window: &Window, gl_config: &Config) -> (&'static str, NotC
 
 fn window_attributes() -> WindowAttributes {
     Window::default_attributes()
-        .with_transparent(true)
         .with_visible(false)
-        .with_title("Glutin triangle gradient example (press Escape to exit)")
 }
 
 enum GlDisplayCreationState {
@@ -266,13 +188,24 @@ enum GlDisplayCreationState {
     Init,
 }
 
+#[derive(Debug, Clone)]
+struct GLInfo {
+    vendor: String,
+    renderer: String,
+    version: String,
+    shading_language: String,
+    driver: String,
+}
+
 struct App {
     template: ConfigTemplateBuilder,
     // NOTE: `AppState` carries the `Window`, thus it should be dropped after everything else.
     gl_context: Option<PossiblyCurrentContext>,
     gl_display: GlDisplayCreationState,
     exit_state: Result<(), Box<dyn Error>>,
+    gl_info: Option<GLInfo>,
 }
+
 
 impl App {
     fn new(template: ConfigTemplateBuilder, display_builder: DisplayBuilder) -> Self {
@@ -281,174 +214,16 @@ impl App {
             gl_display: GlDisplayCreationState::Builder(display_builder),
             exit_state: Ok(()),
             gl_context: None,
+            gl_info: None,
         }
     }
 }
 
-// struct AppState {
-//     gl_surface: Surface<WindowSurface>,
-//     // NOTE: Window should be dropped after all resources created using its
-//     // raw-window-handle.
-//     window: Window,
-// }
 
-// Find the config with the maximum number of samples, so our triangle will be
-// smooth.
 pub fn gl_config_picker(mut configs: Box<dyn Iterator<Item = Config> + '_>) -> Config {
-    return configs.next().unwrap();
-    // configs
-    //     .reduce(|accum, config| {
-    //         let transparency_check = config.supports_transparency().unwrap_or(false)
-    //             & !accum.supports_transparency().unwrap_or(false);
-    //
-    //         if transparency_check || config.num_samples() > accum.num_samples() {
-    //             config
-    //         } else {
-    //             accum
-    //         }
-    //     })
-    //     .unwrap()
+    configs.next().unwrap()
 }
-//
-// pub struct Renderer {
-//     // program: gl::types::GLuint,
-//     // vao: gl::types::GLuint,
-//     // vbo: gl::types::GLuint,
-//     gl: gl::Gl,
-// }
-//
-// impl Renderer {
-//     pub fn new<D: GlDisplay>(gl_display: &D) -> Self {
-//         unsafe {
-//             let gl = gl::Gl::load_with(|symbol| {
-//                 let symbol = CString::new(symbol).unwrap();
-//                 gl_display.get_proc_address(symbol.as_c_str()).cast()
-//             });
-//
-//             if let Some(renderer) = get_gl_string(&gl, gl::RENDERER) {
-//                 println!("Running on {}", renderer.to_string_lossy());
-//             }
-//             if let Some(version) = get_gl_string(&gl, gl::VERSION) {
-//                 println!("OpenGL Version {}", version.to_string_lossy());
-//             }
-//
-//             if let Some(shaders_version) = get_gl_string(&gl, gl::SHADING_LANGUAGE_VERSION) {
-//                 println!("Shaders version on {}", shaders_version.to_string_lossy());
-//             }
-//
-//             // let vertex_shader = create_shader(&gl, gl::VERTEX_SHADER, VERTEX_SHADER_SOURCE);
-//             // let fragment_shader = create_shader(&gl, gl::FRAGMENT_SHADER, FRAGMENT_SHADER_SOURCE);
-//             //
-//             // let program = gl.CreateProgram();
-//             //
-//             // gl.AttachShader(program, vertex_shader);
-//             // gl.AttachShader(program, fragment_shader);
-//             //
-//             // gl.LinkProgram(program);
-//             //
-//             // gl.UseProgram(program);
-//             //
-//             // gl.DeleteShader(vertex_shader);
-//             // gl.DeleteShader(fragment_shader);
-//             //
-//             // let mut vao = std::mem::zeroed();
-//             // gl.GenVertexArrays(1, &mut vao);
-//             // gl.BindVertexArray(vao);
-//             //
-//             // let mut vbo = std::mem::zeroed();
-//             // gl.GenBuffers(1, &mut vbo);
-//             // gl.BindBuffer(gl::ARRAY_BUFFER, vbo);
-//             // gl.BufferData(
-//             //     gl::ARRAY_BUFFER,
-//             //     (VERTEX_DATA.len() * std::mem::size_of::<f32>()) as gl::types::GLsizeiptr,
-//             //     VERTEX_DATA.as_ptr() as *const _,
-//             //     gl::STATIC_DRAW,
-//             // );
-//             //
-//             // let pos_attrib = gl.GetAttribLocation(program, b"position\0".as_ptr() as *const _);
-//             // let color_attrib = gl.GetAttribLocation(program, b"color\0".as_ptr() as *const _);
-//             // gl.VertexAttribPointer(
-//             //     pos_attrib as gl::types::GLuint,
-//             //     2,
-//             //     gl::FLOAT,
-//             //     0,
-//             //     5 * std::mem::size_of::<f32>() as gl::types::GLsizei,
-//             //     std::ptr::null(),
-//             // );
-//             // gl.VertexAttribPointer(
-//             //     color_attrib as gl::types::GLuint,
-//             //     3,
-//             //     gl::FLOAT,
-//             //     0,
-//             //     5 * std::mem::size_of::<f32>() as gl::types::GLsizei,
-//             //     (2 * std::mem::size_of::<f32>()) as *const () as *const _,
-//             // );
-//             // gl.EnableVertexAttribArray(pos_attrib as gl::types::GLuint);
-//             // gl.EnableVertexAttribArray(color_attrib as gl::types::GLuint);
-//
-//             //Self { program, vao, vbo, gl }
-//             Self {  gl }
-//         }
-//     }
-//
-//     // pub fn draw(&self) {
-//     //     self.draw_with_clear_color(0.1, 0.1, 0.1, 0.9)
-//     // }
-//     //
-//     // pub fn draw_with_clear_color(
-//     //     &self,
-//     //     red: GLfloat,
-//     //     green: GLfloat,
-//     //     blue: GLfloat,
-//     //     alpha: GLfloat,
-//     // ) {
-//     //     unsafe {
-//     //         self.gl.UseProgram(self.program);
-//     //
-//     //         self.gl.BindVertexArray(self.vao);
-//     //         self.gl.BindBuffer(gl::ARRAY_BUFFER, self.vbo);
-//     //
-//     //         self.gl.ClearColor(red, green, blue, alpha);
-//     //         self.gl.Clear(gl::COLOR_BUFFER_BIT);
-//     //         self.gl.DrawArrays(gl::TRIANGLES, 0, 3);
-//     //     }
-//     // }
-//     //
-//     // pub fn resize(&self, width: i32, height: i32) {
-//     //     unsafe {
-//     //         self.gl.Viewport(0, 0, width, height);
-//     //     }
-//     // }
-// }
-// //
-// // impl Deref for Renderer {
-// //     type Target = gl::Gl;
-// //
-// //     fn deref(&self) -> &Self::Target {
-// //         &self.gl
-// //     }
-// // }
-// //
-// // impl Drop for Renderer {
-// //     fn drop(&mut self) {
-// //         unsafe {
-// //             self.gl.DeleteProgram(self.program);
-// //             self.gl.DeleteBuffers(1, &self.vbo);
-// //             self.gl.DeleteVertexArrays(1, &self.vao);
-// //         }
-// //     }
-// // }
-// //
-// // unsafe fn create_shader(
-// //     gl: &gl::Gl,
-// //     shader: gl::types::GLenum,
-// //     source: &[u8],
-// // ) -> gl::types::GLuint {
-// //     let shader = gl.CreateShader(shader);
-// //     gl.ShaderSource(shader, 1, [source.as_ptr().cast()].as_ptr(), std::ptr::null());
-// //     gl.CompileShader(shader);
-// //     shader
-// // }
+
 
 fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> Option<&'static CStr> {
     unsafe {
@@ -456,36 +231,3 @@ fn get_gl_string(gl: &gl::Gl, variant: gl::types::GLenum) -> Option<&'static CSt
         (!s.is_null()).then(|| CStr::from_ptr(s.cast()))
     }
 }
-
-// #[rustfmt::skip]
-// static VERTEX_DATA: [f32; 15] = [
-//     -0.5, -0.5,  1.0,  0.0,  0.0,
-//      0.0,  0.5,  0.0,  1.0,  0.0,
-//      0.5, -0.5,  0.0,  0.0,  1.0,
-// ];
-//
-// const VERTEX_SHADER_SOURCE: &[u8] = b"
-// #version 100
-// precision mediump float;
-//
-// attribute vec2 position;
-// attribute vec3 color;
-//
-// varying vec3 v_color;
-//
-// void main() {
-//     gl_Position = vec4(position, 0.0, 1.0);
-//     v_color = color;
-// }
-// \0";
-//
-// const FRAGMENT_SHADER_SOURCE: &[u8] = b"
-// #version 100
-// precision mediump float;
-//
-// varying vec3 v_color;
-//
-// void main() {
-//     gl_FragColor = vec4(v_color, 1.0);
-// }
-// \0";
