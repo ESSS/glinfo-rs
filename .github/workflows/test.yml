@@ -26,7 +26,7 @@ jobs:
       if: "matrix.platform == 'ubuntu-latest'"
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y libgles2-mesa-dev
+        sudo apt-get install -y libgles2-mesa-dev libxkbcommon-x11-0
       shell: bash
     - uses: actions/checkout@v4
     - name: Check
