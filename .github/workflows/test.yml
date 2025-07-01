@@ -1,4 +1,4 @@
-name: Rust
+name: test
 
 on:
   push:
@@ -6,17 +6,34 @@ on:
   pull_request:
     branches: [ "master" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ["ubuntu-latest", "windows-latest"]
+    runs-on: ${{ matrix.platform }}
 
     steps:
+    - name: Install Dependencies
+      if: "matrix.platform == 'ubuntu-latest'"
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y libxkbcommon-x11-0
+      shell: bash
     - uses: actions/checkout@v4
+    - name: Check
+      run: cargo fmt --check
     - name: Build
-      run: cargo build --verbose
+      run: cargo build
     - name: Run tests
-      run: cargo test --verbose
+      uses: coactions/setup-xvfb@v1
+      with:
+        run: cargo test

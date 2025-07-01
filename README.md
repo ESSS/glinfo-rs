@@ -13,7 +13,9 @@ Shading Language: 4.60 NVIDIA
 If the context can't be created, the command will output:
 
 ```
-ERROR: Unable to create an OpenGL context.
+ERROR: <ERROR MESSAGE>
 ```
 
-This is a Rust rewrite of [glinfo](https://github.com/ESSS/glinfo), with the objective of not depending on `Qt` and being statically linked.
+This is a Rust rewrite of [glinfo](https://github.com/ESSS/glinfo), with the aim of not depending on `Qt` and being statically linked.
+
+The `main.rs` file was heavily inspired by [the glutin window example](https://github.com/rust-windowing/glutin/blob/0433af9018febe0696c485ed9d66c40dad41f2d4/glutin_examples/examples/window.rs#L1-L7).
