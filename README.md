@@ -1,6 +1,6 @@
 # glinfo-rs
 
-`glinfo` is a small utility to assess the OpenGL capabilities of the current environment. When called without parameters, the command will create a hidden OpenGL context using Qt and write to standard output contents similar to:
+`glinfo` is a small utility to assess the OpenGL capabilities of the current environment. When called without parameters, the command outputs:
 
 ```
 LibGL Vendor: NVIDIA Corporation
