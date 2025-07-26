@@ -14,4 +14,8 @@ gl_generator = "0.14"
 cfg_aliases = "0.2.1"
 
 [profile.release]
-debug = 0
+opt-level = 'z'    # Optimize for size
+lto = true         # Link Time Optimization
+codegen-units = 1  # Slower build but better optimization
+panic = 'abort'    # Don't generate panic unwinding code
+strip = true       # Strip symbols from binary
