@@ -13,6 +13,7 @@ winit = "*"
 gl_generator = "0.14"
 cfg_aliases = "0.2.1"
 
+# As a small, single shot utility, it makes sense to optimize for size to get a small conda package.
 [profile.release]
 opt-level = 'z'    # Optimize for size
 lto = true         # Link Time Optimization
